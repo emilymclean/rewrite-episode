@@ -9,6 +9,7 @@ pad() {
 rename_file() {
     local file="$1"
     local title_option="$2"
+    local dry_run="$3"
     
     # Extract the directory and filename
     local dir
@@ -35,7 +36,7 @@ rename_file() {
             if [[ $base_name =~ [sS][0-9]+[eE][0-9]+\.((\.?[^.0-9]+)+)\.[0-9]+ ]]; then
                 title="${BASH_REMATCH[1]}"
                 echo "$title"
-                title=$(echo "$title" | sed 's/\./ /')
+                title=$(echo "$title" | sed 's/\./ /g')
                 new_name="${new_name} - ${title}"
             fi
         fi
@@ -43,22 +44,50 @@ rename_file() {
         # Get file extension
         extension="${file##*.}"
         
-        # Rename file within its directory
-        mv "$file" "${dir}/${new_name}.${extension}"
-        echo "Renamed '$base_name' to '${new_name}.${extension}'"
+        # If dry_run is set, print what would be done instead of renaming
+        if [[ $dry_run == true ]]; then
+            echo "DRY RUN: Would rename '$base_name' to '${new_name}.${extension}'"
+        else
+            # Rename file within its directory
+            mv "$file" "${dir}/${new_name}.${extension}"
+            echo "Renamed '$base_name' to '${new_name}.${extension}'"
+        fi
     else
         echo "No season/episode pattern found in '$file'"
     fi
 }
 
 # Check if a directory or file is provided
-if [[ -d "$1" ]]; then
-    for file in "$1"/*; do
-        rename_file "$file" "$2"
+dry_run=false
+title_option=""
+
+# Ensure at least one argument is passed
+if [[ "$#" -lt 1 ]]; then
+    echo "Usage: $0 <file_or_directory> [--dash-separated-title | --dot-separated-title] [--dry-run]"
+    exit 1
+fi
+
+# Capture the first argument as the file or directory
+file_or_directory="$1"
+shift  # Shift the arguments to handle optional parameters
+
+# Process any remaining arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --dry-run) dry_run=true ;;
+        --dash-separated-title | --dot-separated-title) title_option="$1" ;;
+        *) echo "Unknown option: $1" ; exit 1 ;;
+    esac
+    shift
+done
+
+if [[ -d "$file_or_directory" ]]; then
+    for file in "$file_or_directory"/*; do
+        rename_file "$file" "$title_option" "$dry_run"
     done
-elif [[ -f "$1" ]]; then
-    rename_file "$1" "$2"
+elif [[ -f "$file_or_directory" ]]; then
+    rename_file "$file_or_directory" "$title_option" "$dry_run"
 else
-    echo "Usage: $0 <file_or_directory> [--dash-separated-title | --dot-separated-title] --dry_run"
+    echo "Usage: $0 <file_or_directory> [--dash-separated-title | --dot-separated-title] [--dry-run]"
     exit 1
 fi
