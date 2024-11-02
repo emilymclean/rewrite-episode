@@ -35,7 +35,6 @@ rename_file() {
             # Parse title with dot separator and stop at any digit
             if [[ $base_name =~ [sS][0-9]+[eE][0-9]+\.((\.?[^.0-9]+)+)\.[0-9]+ ]]; then
                 title="${BASH_REMATCH[1]}"
-                echo "$title"
                 title=$(echo "$title" | sed 's/\./ /g')
                 new_name="${new_name} - ${title}"
             fi
