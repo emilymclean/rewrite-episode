@@ -18,22 +18,33 @@ rename_file() {
     base_name=$(basename "$file")
     
     # Extract season and episode number (supports S01E01, S1E1, etc.)
-    if [[ $base_name =~ ([Ss]([0-9]+))[Ee]([0-9]+) ]]; then
+    if [[ $base_name =~ ([Ss]([0-9]+))[Ee]([0-9]+)-?([Ee]([0-9]+))+ ]]; then
         season=$(pad "${BASH_REMATCH[2]}")
-        episode=$(pad "${BASH_REMATCH[3]}")
-        new_name="S${season}E${episode}"
+        start_episode=$(pad "${BASH_REMATCH[3]}")
+        end_episode=""
+
+        if [[ ${BASH_REMATCH[4]} ]]; then
+            end_episode=$(pad "${BASH_REMATCH[5]}")
+        fi
+        
+        # Construct new name
+        if [[ -n $end_episode ]]; then
+            new_name="S${season}E${start_episode}-E${end_episode}"
+        else
+            new_name="S${season}E${start_episode}"
+        fi
         
         # Determine the title parsing method based on the option
         if [[ $title_option == "--dash-separated-title" ]]; then
             # Use dash separator by default
-            if [[ $base_name =~ [sS][0-9]+[eE][0-9]+\ -\ ([^()]+)\( ]]; then
-                title="${BASH_REMATCH[1]}"
+            if [[ $base_name =~ [sS][0-9]+(-?[eE][0-9]+)+\ -\ ([^()]+)[\(\.] ]]; then
+                title="${BASH_REMATCH[2]}"
                 title=$(echo "$title" | sed 's/[[:space:]]*$//')
                 new_name="${new_name} - ${title}"
             fi
         elif [[ $title_option == "--dot-separated-title" ]]; then
             # Parse title with dot separator and stop at any digit
-            if [[ $base_name =~ [sS][0-9]+[eE][0-9]+\.((\.?[^.0-9]+)+)\.[0-9]+ ]]; then
+            if [[ $base_name =~ [sS][0-9]+(-?[eE][0-9]+)+\.((\.?[^.0-9]+)+)\.[0-9]+ ]]; then
                 title="${BASH_REMATCH[1]}"
                 title=$(echo "$title" | sed 's/\./ /g')
                 new_name="${new_name} - ${title}"
